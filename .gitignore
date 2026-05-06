@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.pyc
+__pycache__/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OpenHarness is a separate repo (submodule)
+OpenHarness/
+
+# Backend data (auto-generated)
+webui/backend/data/
+
+# Test artifacts (keep test scripts, remove temp generated files)
+test-enter-key.html
+test-chat-flow.html
