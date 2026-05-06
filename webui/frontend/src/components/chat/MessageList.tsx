@@ -10,15 +10,20 @@ export function MessageList() {
   const assistantBuffer = useChatStore((s) => s.assistantBuffer)
   const busy = useChatStore((s) => s.busy)
   const busyLabel = useChatStore((s) => s.busyLabel)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const { t } = useTranslation()
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = containerRef.current
+    if (!el) return
+    // Direct scroll to bottom instead of smooth scrollIntoView.
+    // During streaming, smooth animation can't keep up with rapid
+    // re-renders, causing the visible area to get stuck mid-way.
+    el.scrollTop = el.scrollHeight
   }, [transcript, assistantBuffer])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-2 scroll-thin">
+    <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-2 scroll-thin">
       {transcript.length === 0 && !busy && (
         <div className="flex flex-col items-center justify-center h-full text-center">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
@@ -55,8 +60,6 @@ export function MessageList() {
           <span>{busyLabel ?? t('chat.processing')}</span>
         </div>
       )}
-
-      <div ref={bottomRef} />
     </div>
   )
 }
