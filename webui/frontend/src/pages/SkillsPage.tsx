@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Brain, Upload, ToggleLeft, ToggleRight, FileText, ExternalLink, Plus, X } from 'lucide-react'
 import { useSkillsStore } from '../stores/skillsStore'
+import { useTranslation } from '../stores/i18nStore'
 import { Button } from '../components/shared/Button'
 import { Input } from '../components/shared/Input'
 import { Modal } from '../components/shared/Modal'
@@ -13,6 +15,8 @@ export function SkillsPage() {
   const [expandedSkill, setExpandedSkill] = useState<string | null>(null)
   const [showInstallForm, setShowInstallForm] = useState(false)
   const [installForm, setInstallForm] = useState({ name: '', source: '' })
+  const navigate = useNavigate()
+  const { t } = useTranslation()
 
   useEffect(() => {
     fetchSkills()
@@ -21,41 +25,48 @@ export function SkillsPage() {
   const handleToggle = async (name: string) => {
     try {
       await toggleSkill(name)
-      toast('success', `Skill ${skills.find((s) => s.name === name)?.enabled ? 'disabled' : 'enabled'}`)
+      toast('success', t('skills.toggled', `Skill toggled`))
     } catch (err) {
-      toast('error', `Failed to toggle: ${(err as Error).message}`)
+      toast('error', (err as Error).message)
     }
   }
 
   const handleDelete = async (name: string) => {
-    if (!confirm(`Delete skill "${name}"?`)) return
+    if (!confirm(t('skills.deleteConfirm', `Delete skill "${name}"?`))) return
     try {
       await deleteSkill(name)
-      toast('success', 'Skill deleted')
+      toast('success', t('skills.deleted', 'Skill deleted'))
     } catch (err) {
-      toast('error', `Failed to delete: ${(err as Error).message}`)
+      toast('error', (err as Error).message)
     }
   }
 
   const handleInstall = async () => {
     if (!installForm.name.trim()) {
-      toast('error', 'Skill name is required')
+      toast('error', t('skills.nameRequired', 'Skill name is required'))
       return
     }
     try {
-      await createSkill({ name: installForm.name.trim(), source: installForm.source.trim() })
+      await createSkill({
+        name: installForm.name.trim(),
+        source: installForm.source.trim() || 'manual',
+      })
       setShowInstallForm(false)
       setInstallForm({ name: '', source: '' })
-      toast('success', 'Skill installed')
+      toast('success', t('skills.installed', 'Skill installed'))
     } catch (err) {
-      toast('error', `Failed: ${(err as Error).message}`)
+      toast('error', (err as Error).message)
     }
+  }
+
+  const handleViewDetail = (name: string) => {
+    navigate(`/skills/${encodeURIComponent(name)}`)
   }
 
   if (loading && skills.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-text-tertiary">
-        <Spinner className="mr-2" /> Loading skills...
+        <Spinner className="mr-2" /> {t('common.loading')}
       </div>
     )
   }
@@ -67,23 +78,23 @@ export function SkillsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-              <Brain size={20} /> Skills
+              <Brain size={20} /> {t('skills.title')}
             </h1>
-            <p className="text-sm text-text-secondary mt-1">Manage AI skills and extensions</p>
+            <p className="text-sm text-text-secondary mt-1">{t('skills.desc', 'Manage AI skills and extensions')}</p>
           </div>
           <Button variant="primary" onClick={() => setShowInstallForm(true)}>
-            <Upload size={16} /> Install Skill
+            <Upload size={16} /> {t('skills.install')}
           </Button>
         </div>
 
         {/* Empty state */}
-        {skills.length === 0 && (
+        {!loading && skills.length === 0 && (
           <div className="text-center py-16 border border-dashed border-border rounded-lg">
             <Brain size={40} className="mx-auto mb-3 text-text-tertiary" />
-            <p className="text-sm text-text-secondary mb-1">No skills installed.</p>
-            <p className="text-xs text-text-tertiary mb-4">Install a skill to extend AI capabilities.</p>
+            <p className="text-sm text-text-secondary mb-1">{t('skills.noSkills')}</p>
+            <p className="text-xs text-text-tertiary mb-4">{t('skills.noSkillsDesc')}</p>
             <Button variant="primary" onClick={() => setShowInstallForm(true)}>
-              <Upload size={14} /> Install Your First Skill
+              <Upload size={14} /> {t('skills.installFirst', 'Install Your First Skill')}
             </Button>
           </div>
         )}
@@ -121,21 +132,29 @@ export function SkillsPage() {
                           className={`p-1 rounded transition-colors ${
                             skill.enabled ? 'text-emerald-400 hover:text-emerald-300' : 'text-text-tertiary hover:text-text-secondary'
                           }`}
-                          title={skill.enabled ? 'Disable' : 'Enable'}
+                          title={skill.enabled ? t('skills.disable', 'Disable') : t('skills.enable', 'Enable')}
                         >
                           {skill.enabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                         </button>
                         <button
                           onClick={() => setExpandedSkill(isExpanded ? null : skill.name)}
                           className="p-1 text-text-tertiary hover:text-text-primary transition-colors"
-                          title="View details"
+                          title={t('skills.viewDetails', 'View details')}
                         >
                           <FileText size={14} />
+                        </button>
+                        {/* Link to skill detail page */}
+                        <button
+                          onClick={() => handleViewDetail(skill.name)}
+                          className="p-1 text-text-tertiary hover:text-primary transition-colors"
+                          title={t('skills.openDetail', 'Open detail page')}
+                        >
+                          <ExternalLink size={14} />
                         </button>
                         <button
                           onClick={() => handleDelete(skill.name)}
                           className="p-1 text-text-tertiary hover:text-danger transition-colors"
-                          title="Delete"
+                          title={t('skills.delete', 'Delete')}
                         >
                           <X size={14} />
                         </button>
@@ -145,9 +164,9 @@ export function SkillsPage() {
                     {/* Expanded content */}
                     {isExpanded && (
                       <div className="mt-4 pt-3 border-t border-border">
-                        <div className="text-xs text-text-secondary mb-2">Content:</div>
+                        <div className="text-xs text-text-secondary mb-2">{t('skills.content', 'Content:')}</div>
                         <pre className="bg-code border border-border rounded p-3 text-xs text-text-primary overflow-x-auto max-h-64 whitespace-pre-wrap font-mono">
-                          {skill.content || 'No content available.'}
+                          {skill.content || t('skills.noContent', 'No content available.')}
                         </pre>
                       </div>
                     )}
@@ -160,26 +179,26 @@ export function SkillsPage() {
       </div>
 
       {/* Install Skill modal */}
-      <Modal open={showInstallForm} onClose={() => setShowInstallForm(false)} title="Install Skill">
+      <Modal open={showInstallForm} onClose={() => setShowInstallForm(false)} title={t('skills.installTitle', 'Install Skill')}>
         <div className="space-y-4">
           <Input
-            label="Skill Name"
-            placeholder="my-skill"
+            label={t('skills.nameLabel', 'Skill Name')}
+            placeholder={t('skills.namePlaceholder', 'my-skill')}
             value={installForm.name}
             onChange={(e) => setInstallForm((f) => ({ ...f, name: e.target.value }))}
           />
           <Input
-            label="Source File Path"
-            placeholder="/path/to/skill.yaml or URL"
+            label={t('skills.sourceLabel', 'Source File Path')}
+            placeholder={t('skills.sourcePlaceholder', '/path/to/skill.yaml or URL')}
             value={installForm.source}
             onChange={(e) => setInstallForm((f) => ({ ...f, source: e.target.value }))}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowInstallForm(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button variant="primary" onClick={handleInstall}>
-              Install
+              {t('skills.install')}
             </Button>
           </div>
         </div>

@@ -41,38 +41,29 @@ export const useSkillsStore = create<SkillsState>((set, get) => ({
 
   createSkill: async (data) => {
     set({ error: null })
-    try {
-      const res = await fetch(`${API_BASE}/skills`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) throw new Error('Failed to create skill')
-      await get().fetchSkills()
-    } catch (err) {
-      set({ error: (err as Error).message })
+    const res = await fetch(`${API_BASE}/skills`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(text ? `Failed to create skill: ${text.slice(0, 200)}` : `Failed to create skill (HTTP ${res.status})`)
     }
+    await get().fetchSkills()
   },
 
   toggleSkill: async (name) => {
     set({ error: null })
-    try {
-      const res = await fetch(`${API_BASE}/skills/${name}/toggle`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to toggle skill')
-      await get().fetchSkills()
-    } catch (err) {
-      set({ error: (err as Error).message })
-    }
+    const res = await fetch(`${API_BASE}/skills/${encodeURIComponent(name)}/toggle`, { method: 'POST' })
+    if (!res.ok) throw new Error('Failed to toggle skill')
+    await get().fetchSkills()
   },
 
   deleteSkill: async (name) => {
     set({ error: null })
-    try {
-      const res = await fetch(`${API_BASE}/skills/${name}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete skill')
-      await get().fetchSkills()
-    } catch (err) {
-      set({ error: (err as Error).message })
-    }
+    const res = await fetch(`${API_BASE}/skills/${encodeURIComponent(name)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Failed to delete skill')
+    await get().fetchSkills()
   },
 }))

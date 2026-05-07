@@ -18,6 +18,7 @@ interface ChatState {
   busy: boolean
   busyLabel: string | undefined
   ready: boolean
+  currentSessionId: string | null
 
   // Status
   status: Record<string, unknown>
@@ -44,6 +45,9 @@ interface ChatState {
   setBusy: (busy: boolean) => void
   setBusyLabel: (label: string | undefined) => void
   clearTranscript: () => void
+  newSession: () => Promise<string | null>
+  setCurrentSessionId: (id: string | null) => void
+  restoreTranscript: (items: TranscriptItem[]) => void
 
   // Internal
   _handleEvent: (event: BackendEvent) => void
@@ -54,8 +58,33 @@ const busyTimeoutMs = 30_000  // reset busy if no response after 30s
 let assistantTimer: ReturnType<typeof setTimeout> | null = null
 let transcriptTimer: ReturnType<typeof setTimeout> | null = null
 let busyTimer: ReturnType<typeof setTimeout> | null = null
+let saveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingAssistant = ''
 let pendingTranscript: TranscriptItem[] = []
+
+// Helper: extract last user question from transcript for session naming
+function _lastUserQuestion(items: TranscriptItem[]): string {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (items[i].role === 'user') {
+      const text = items[i].text?.trim() ?? ''
+      return text.length > 50 ? text.slice(0, 47) + '...' : text
+    }
+  }
+  return ''
+}
+
+// Debounced auto-save of transcript to current session
+async function _autoSaveTranscript(sessionId: string | null, items: TranscriptItem[]) {
+  if (!sessionId || items.length === 0) return
+  const name = _lastUserQuestion(items)
+  try {
+    await fetch(`/api/sessions/${sessionId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript: items, message_count: items.length, ...(name ? { name } : {}) }),
+    })
+  } catch { /* silent save failure */ }
+}
 
 export const useChatStore = create<ChatState>((set, get) => ({
   ws: null,
@@ -66,6 +95,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   busy: false,
   busyLabel: undefined,
   ready: false,
+  currentSessionId: null,
 
   status: {},
   tasks: [],
@@ -152,6 +182,53 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ transcript: [], assistantBuffer: '' })
   },
 
+  newSession: async () => {
+    // Save current transcript to existing session before clearing
+    const { transcript, currentSessionId } = get()
+    if (currentSessionId && transcript.length > 0) {
+      const name = _lastUserQuestion(transcript)
+      try {
+        await fetch(`/api/sessions/${currentSessionId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transcript,
+            message_count: transcript.length,
+            ...(name ? { name } : {}),
+          }),
+        })
+      } catch { /* silent */ }
+    }
+
+    // Clear local state
+    pendingTranscript = []
+    pendingAssistant = ''
+    set({ transcript: [], assistantBuffer: '', currentSessionId: null })
+
+    // Create new session in backend
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'New Session', model: '', provider: '' }),
+      })
+      const result = await res.json()
+      const sid = result.session?.id ?? null
+      set({ currentSessionId: sid })
+      return sid
+    } catch {
+      return null
+    }
+  },
+
+  setCurrentSessionId: (id) => set({ currentSessionId: id }),
+
+  restoreTranscript: (items) => {
+    pendingTranscript = []
+    pendingAssistant = ''
+    set({ transcript: items, assistantBuffer: '' })
+  },
+
   // ─── Internal event handler ───
   _handleEvent: (event: BackendEvent) => {
     switch (event.type) {
@@ -201,9 +278,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           if (assistantTimer) clearTimeout(assistantTimer)
           assistantTimer = setTimeout(() => {
             assistantTimer = null
-            const text = pendingAssistant
-            pendingAssistant = ''
-            set({ assistantBuffer: text })
+            set({ assistantBuffer: pendingAssistant })
           }, flushMs)
         }
         break
@@ -255,7 +330,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       case 'line_complete': {
         if (busyTimer) { clearTimeout(busyTimer); busyTimer = null }
+        const { currentSessionId, transcript } = get()
         set({ busy: false, busyLabel: undefined })
+        // Auto-save transcript after each exchange (debounced)
+        if (saveTimer) clearTimeout(saveTimer)
+        saveTimer = setTimeout(() => _autoSaveTranscript(currentSessionId, transcript), 500)
         break
       }
 

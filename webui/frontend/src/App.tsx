@@ -7,6 +7,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { PermissionsPage } from './pages/PermissionsPage'
 import { ToolsPage } from './pages/ToolsPage'
 import { SkillsPage } from './pages/SkillsPage'
+import { SkillDetailPage } from './pages/SkillDetailPage'
 import { MemoryPage } from './pages/MemoryPage'
 import { TasksPage } from './pages/TasksPage'
 import { PluginsPage } from './pages/PluginsPage'
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/permissions" element={<PermissionsPage />} />
         <Route path="/tools" element={<ToolsPage />} />
         <Route path="/skills" element={<SkillsPage />} />
+        <Route path="/skills/:name" element={<SkillDetailPage />} />
         <Route path="/memory" element={<MemoryPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/plugins" element={<PluginsPage />} />

@@ -9,6 +9,7 @@ from app.services.sessions_service import (
     list_sessions,
     create_session,
     get_session,
+    update_session,
     delete_session,
 )
 
@@ -43,6 +44,19 @@ async def api_get_session(id: str):
         return get_session(id)
     except ValueError as e:
         raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.put("/{id}")
+async def api_update_session(id: str, data: dict):
+    try:
+        result = update_session(id, data)
+        if result is None:
+            raise HTTPException(404, f"Session '{id}' not found")
+        return {"status": "ok", "session": result}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e))
 

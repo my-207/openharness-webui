@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Settings, Zap, Menu } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Settings, Zap, Menu, Plus } from 'lucide-react'
 import { useProviderStore } from '../../stores/providerStore'
+import { useChatStore } from '../../stores/chatStore'
 import { useTranslation } from '../../stores/i18nStore'
 
 interface NavBarProps {
@@ -10,7 +11,9 @@ interface NavBarProps {
 
 export function NavBar({ onToggleSidebar }: NavBarProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { profiles, fetchProfiles, switchProfile } = useProviderStore()
+  const newSession = useChatStore((s) => s.newSession)
   const { t } = useTranslation()
 
   useEffect(() => {
@@ -22,6 +25,11 @@ export function NavBar({ onToggleSidebar }: NavBarProps) {
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const name = e.target.value
     if (name) switchProfile(name)
+  }
+
+  const handleNewChat = async () => {
+    await newSession()
+    navigate('/chat')
   }
 
   return (
@@ -44,6 +52,16 @@ export function NavBar({ onToggleSidebar }: NavBarProps) {
           className="w-full bg-surface-tertiary border border-border rounded px-3 py-1.5 text-xs text-text-secondary placeholder-text-tertiary outline-none focus:border-primary/50 transition-colors"
         />
       </div>
+
+      {/* New Chat */}
+      <button
+        onClick={handleNewChat}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+        title="New session"
+      >
+        <Plus size={14} />
+        <span className="hidden sm:inline">New Chat</span>
+      </button>
 
       {/* Model selector — synced with provider profiles */}
       <select

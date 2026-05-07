@@ -24,7 +24,6 @@ interface SideBarProps {
 }
 
 const navItems = [
-  { to: '/chat', icon: MessageSquare, labelKey: 'nav.chat', exact: true },
   { to: '/sessions', icon: History, labelKey: 'nav.history' },
   { to: '/providers', icon: Settings, labelKey: 'nav.providers' },
   { to: '/tools', icon: Wrench, labelKey: 'nav.tools' },
@@ -76,7 +75,7 @@ export function SideBar({ collapsed }: SideBarProps) {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.exact}
+              end={false}
               className={({ isActive }) =>
                 clsx(
                   'flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { TranscriptItem } from '../types/protocol'
 
 const API_BASE = '/api'
 
@@ -10,6 +11,7 @@ export interface Session {
   created_at: string
   message_count: number
   summary: string
+  transcript?: TranscriptItem[]
 }
 
 interface SessionsState {
@@ -18,7 +20,8 @@ interface SessionsState {
   error: string | null
 
   fetchSessions: () => Promise<void>
-  createSession: (data: Partial<Session>) => Promise<void>
+  createSession: (data: Partial<Session>) => Promise<Session | null>
+  updateSession: (id: string, data: Partial<Session>) => Promise<Session | null>
   deleteSession: (id: string) => Promise<void>
 }
 
@@ -48,9 +51,30 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
         body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Failed to create session')
+      const result = await res.json()
       await get().fetchSessions()
+      return result.session ?? null
     } catch (err) {
       set({ error: (err as Error).message })
+      return null
+    }
+  },
+
+  updateSession: async (id, data) => {
+    set({ error: null })
+    try {
+      const res = await fetch(`${API_BASE}/sessions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update session')
+      const result = await res.json()
+      await get().fetchSessions()
+      return result.session ?? null
+    } catch (err) {
+      set({ error: (err as Error).message })
+      return null
     }
   },
 

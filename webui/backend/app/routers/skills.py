@@ -19,8 +19,8 @@ router = APIRouter(prefix="/api/skills", tags=["skills"])
 class SkillCreate(BaseModel):
     name: str
     description: str | None = None
-    prompt: str
-    cwds: list[str] | None = None
+    content: str | None = None
+    source: str | None = None
 
 
 @router.get("")
@@ -31,7 +31,7 @@ async def api_list_skills():
 @router.post("")
 async def api_create_skill(data: SkillCreate):
     try:
-        result = create_skill(data.model_dump())
+        result = create_skill(data.model_dump(exclude_none=True))
         return {"status": "ok", "skill": result}
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -42,9 +42,12 @@ async def api_create_skill(data: SkillCreate):
 @router.get("/{name}")
 async def api_get_skill(name: str):
     try:
-        return get_skill(name)
-    except ValueError as e:
-        raise HTTPException(404, str(e))
+        result = get_skill(name)
+        if result is None:
+            raise HTTPException(404, f"Skill '{name}' not found")
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -52,20 +55,24 @@ async def api_get_skill(name: str):
 @router.delete("/{name}")
 async def api_delete_skill(name: str):
     try:
-        delete_skill(name)
+        deleted = delete_skill(name)
+        if not deleted:
+            raise HTTPException(404, f"Skill '{name}' not found")
         return {"status": "ok"}
-    except ValueError as e:
-        raise HTTPException(404, str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e))
 
 
-@router.patch("/{name}/toggle")
+@router.post("/{name}/toggle")
 async def api_toggle_skill(name: str):
     try:
-        toggle_skill(name)
+        toggled = toggle_skill(name)
+        if not toggled:
+            raise HTTPException(404, f"Skill '{name}' not found")
         return {"status": "ok", "name": name}
-    except ValueError as e:
-        raise HTTPException(404, str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e))

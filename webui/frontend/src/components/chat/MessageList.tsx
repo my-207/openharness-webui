@@ -46,7 +46,7 @@ export function MessageList() {
           <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-1">
             <Bot size={14} className="text-emerald-400" />
           </div>
-          <div className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">
+          <div className="max-w-[75%] text-text-primary text-sm leading-relaxed whitespace-pre-wrap">
             {assistantBuffer}
             <span className="animate-pulse ml-0.5">▊</span>
           </div>

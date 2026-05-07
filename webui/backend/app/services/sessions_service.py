@@ -54,10 +54,24 @@ def create_session(data: dict) -> dict:
         "message_count": data.get("message_count", 0),
         "summary": data.get("summary", ""),
         "tags": data.get("tags", []),
+        "transcript": data.get("transcript", []),
     }
     sessions.append(session)
     _save_data(sessions)
     return session
+
+
+def update_session(session_id: str, data: dict) -> dict | None:
+    """Update session fields (name, transcript, message_count, etc.)."""
+    sessions = _load_data()
+    for i, s in enumerate(sessions):
+        if s["id"] == session_id:
+            for key in ("name", "transcript", "message_count", "summary", "tags", "model", "provider"):
+                if key in data:
+                    sessions[i][key] = data[key]
+            _save_data(sessions)
+            return sessions[i]
+    return None
 
 
 def delete_session(session_id: str) -> bool:
